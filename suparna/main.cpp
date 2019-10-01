@@ -1,10 +1,13 @@
 #include <iostream>
 
+extern "C"
+{
 #include <libavutil/avutil.h>
+}
 
 
 int main(int , char *[])
 {
-    std::cout << ::av_version_info() << std::endl;
+    std::cout << av_version_info() << std::endl;
     return 0;
 }
