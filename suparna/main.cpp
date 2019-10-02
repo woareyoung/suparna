@@ -6,6 +6,8 @@ extern "C"
 }
 
 
+#include "io/io.h"
+
 int main(int , char *[])
 {
     std::cout << av_version_info() << std::endl;
