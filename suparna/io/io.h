@@ -24,8 +24,8 @@ enum FormatID
     APE
 };
 /* 从文件中读取到音频数据
- * @file_name  文件路径
- * @data  __out__ 用于保存音频数据
+ * @file_name  文件路径，绝对路径或相对路径
+ * @data  __out__ 保存音频数据，用于输出
  * @return  数据长度
  * finish date:
  */
@@ -46,6 +46,15 @@ int to_mpeg(const char *data, size_type size, const char *file_name);
 int to_flac(const char *data, size_type size, const char *file_name);
 int to_ape(const char *data, size_type size, const char *file_name);
 
+/* 将音频数据输出为文件
+ * @data  音频数据
+ * @size  音频数据长度
+ * @file_name  文件名
+ * @context  编码器上下文
+ * @code  编码器
+ * @return   成功——0，失败—— -1
+ * finish date: 2019.10.04
+ */
 int write(const char *data, size_type size, const char *file_name, struct AVCodecContext *context, struct AVCodec *code);
 
 /* 根据文件类型获取对应的编码器上下文
