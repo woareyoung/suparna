@@ -3,7 +3,6 @@
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
 #include <libswresample/swresample.h>
-//#include <swresample_internal.h>
 
 static enum AVCodecID FormatTablep[] =
 {
@@ -14,7 +13,7 @@ static enum AVCodecID FormatTablep[] =
     AV_CODEC_ID_APE
 };
 
-int from_file(const char *file_name, char *data)
+size_type from_file(const char *file_name, char *data)
 {
     return 1;
 }

@@ -27,7 +27,7 @@ enum FormatID
  * @return  数据长度
  * finish date:
  */
-int from_file(const char *file_name, char *data);
+size_type from_file(const char *file_name, char *data);
 
 /* 将音频数据输出为文件
  * @data  音频数据
