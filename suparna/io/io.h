@@ -6,7 +6,9 @@ extern "C"
 {
 #endif
 
-typedef unsigned long long size_type;
+#ifndef size_type
+#define size_type unsigned long long
+#endif
 
 struct AVCodecContext;
 struct AVCodec;

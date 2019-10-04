@@ -4,7 +4,7 @@
 #include <libavformat/avformat.h>
 #include <libswresample/swresample.h>
 
-static enum AVCodecID FormatTablep[] =
+static const enum AVCodecID FormatTablep[] =
 {
     AV_CODEC_ID_MP3,
     AV_CODEC_ID_PCM_S16LE,
