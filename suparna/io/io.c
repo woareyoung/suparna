@@ -8,7 +8,6 @@ static const enum AVCodecID FormatTablep[] =
 {
     AV_CODEC_ID_MP3,
     AV_CODEC_ID_PCM_S16LE,
-    AV_CODEC_ID_MPEG4,
     AV_CODEC_ID_FLAC,
     AV_CODEC_ID_APE
 };
@@ -26,8 +25,8 @@ int to_file(const char *data, size_type size, const char *file_name, enum Format
     {
         return -1;
     }
-    context->bit_rate = 64000;
-    context->sample_rate = 44100;
+    context->bit_rate = 64000;//波特率
+    context->sample_rate = 44100;//采样率
     context->sample_fmt = type == WAV ? AV_SAMPLE_FMT_S16 : AV_SAMPLE_FMT_S16P;
     context->channels = 2;
     context->channel_layout = (unsigned long long)av_get_default_channel_layout(2);
@@ -39,8 +38,6 @@ int to_mp3(const char *data, size_type size, const char *file_name)
 { return to_file(data, size, file_name, MP3); }
 int to_wav(const char *data, size_type size, const char *file_name)
 { return to_file(data, size, file_name, WAV); }
-int to_mpeg(const char *data, size_type size, const char *file_name)
-{ return to_file(data, size, file_name, MPEG); }
 int to_flac(const char *data, size_type size, const char *file_name)
 { return to_file(data, size, file_name, FLAC); }
 int to_ape(const char *data, size_type size, const char *file_name)
@@ -177,7 +174,7 @@ int write(const char *data, size_type size, const char *file_name, struct AVCode
         count++;
     }
 
-    int frameCount = 0;
+    int frame_count = 0;
     for (size_type i = 0; i < count; ++i)
     {
         // 创建Packet
@@ -225,7 +222,7 @@ int write(const char *data, size_type size, const char *file_name, struct AVCode
             //frame->pts = av_rescale_q(0, rational, context->time_base);
         }
 
-        frame->pts = frameCount++;
+        frame->pts = frame_count++;
         // 发送Frame
         result = avcodec_send_frame(context, frame);
         if (result < 0)

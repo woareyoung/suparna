@@ -19,7 +19,6 @@ enum FormatID
 {
     MP3,
     WAV,
-    MPEG,
     FLAC,
     APE
 };
@@ -42,7 +41,6 @@ size_type from_file(const char *file_name, char *data);
 int to_file(const char *data, size_type size, const char *file_name, enum FormatID type);
 int to_mp3(const char *data, size_type size, const char *file_name);
 int to_wav(const char *data, size_type size, const char *file_name);
-int to_mpeg(const char *data, size_type size, const char *file_name);
 int to_flac(const char *data, size_type size, const char *file_name);
 int to_ape(const char *data, size_type size, const char *file_name);
 
