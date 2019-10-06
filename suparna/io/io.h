@@ -24,7 +24,7 @@ enum FormatID
 };
 /* 从文件中读取到音频数据
  * @file_name  文件路径，绝对路径或相对路径
- * @data  __out__ 保存音频数据，用于输出
+ * @data  __out__ 保存音频的pcm数据，用于输出
  * @return  数据长度
  * finish date: 2019.10.06
  */
