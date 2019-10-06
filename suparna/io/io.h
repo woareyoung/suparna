@@ -26,7 +26,7 @@ enum FormatID
  * @file_name  文件路径，绝对路径或相对路径
  * @data  __out__ 保存音频数据，用于输出
  * @return  数据长度
- * finish date:
+ * finish date: 2019.10.06
  */
 size_type from_file(const char *file_name, char *data);
 
