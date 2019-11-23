@@ -17,7 +17,8 @@ HEADERS = io/io.h \
 		  base/sbreak.h \
 		  base/sjoin.h \
 		  base/smerge.h \
-		  base/sspilt.h 
+		  base/sspilt.h \
+		  systool/file.h
 
 # base目录
 base_objects = $(OUTPUT_DIR)/base/sbreak.o $(OUTPUT_DIR)/base/sjoin.o \
