@@ -1,13 +1,11 @@
 #ifndef IO_H
 #define IO_H
 
+#include "../type_def.h"
+
 #ifdef __cplusplus
 extern "C"
 {
-#endif
-
-#ifndef size_type
-#define size_type unsigned long long
 #endif
 
 struct AVCodecContext;

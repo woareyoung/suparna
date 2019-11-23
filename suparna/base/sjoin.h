@@ -1,13 +1,11 @@
 #ifndef SJOIN_H
 #define SJOIN_H
 
+#include "../type_def.h"
+
 #ifdef __cplusplus
 extern "C"
 {
-#endif
-
-#ifndef size_type
-#define size_type unsigned long long
 #endif
 
 /* 拼接两段音频，result = sound1 + sound2

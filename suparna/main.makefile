@@ -1,45 +1,53 @@
+LIB_PATH = E:/ffmpeg/ffmpeg/lib
 CC = gcc
-CCFLAGS = -c -W
+CCFLAGS = -Wall -g
 CXX = g++
-CXXFLAGS = $(CCFLAGS) -std=c++11
+CXXFLAGS = $(CCFLAGS) -std=c++17
 COMPILE_TYPE = debug
 OUTPUT_DIR = ../$(COMPILE_TYPE)
-
 INCLUDE_PATH = E:/ffmpeg/ffmpeg/include
-LIB_PATH = E:/ffmpeg/ffmpeg/lib
 
-FFMPEG_LIB = -llibavcodec -llibavdivice -llibavfilter \
-             -llibavformat -llibavuti -llibpostproc \
-			 -llibswresample -llibswscale 
+TARGET = $(OUTPUT_DIR)/Suparna
 
-TARGET = $(OUTPUT_DIR)/suparna
+HEADERS = io/io.h \
+		  base/sbreak.h \
+		  base/sjoin.h \
+		  base/smerge.h \
+		  base/sspilt.h 
+
+base_objects = $(OUTPUT_DIR)/base/sbreak.o $(OUTPUT_DIR)/base/sjoin.o \
+				$(OUTPUT_DIR)/base/smerge.o $(OUTPUT_DIR)/base/sspilt.o
+
+objects = $(base_objects) $(OUTPUT_DIR)/io/io.o
+
+FFMPEG_LIBS = -lavcodec -lswscale
+
+FFMPEG_LIB = -lavcodec -lavdevice \
+			 -lavfilter -lavformat \
+			 -lavutil -lpostproc \
+			 -lswresample -lswscale 
 
 # $(shell mkdir -p $(OUTPUT_DIR))
 # $(shell mkdir -p $(OUTPUT_DIR)/io)
 # $(shell mkdir -p $(OUTPUT_DIR)/base)
 
-objects = $(OUTPUT_DIR)/io/io.o $(OUTPUT_DIR)/base/base.o
+$(TARGET): main.cpp $(objects) $(HEADERS)
+	$(CXX) $(CXXFLAGS) -L$(LIB_PATH) $(FFMPEG_LIB) -o $(TARGET) main.cpp $(objects)
 
-base_objects = $(OUTPUT_DIR)/base/sbreak.o $(OUTPUT_DIR)/base/sjoin.o \
-				$(OUTPUT_DIR)/base/smerge.o $(OUTPUT_DIR)/base/sspilt.o
-
-main: $(objects)
-	$(CXX) -o $(TARGET) $(objects)
-
-$(OUTPUT_DIR)/io/io.o: io/io.c io/io.h
-	$(CC) $(CCFLAGS) -I$(INCLUDE_PATH) -o $(OUTPUT_DIR)/io/io.o io/io.c
-
-$(OUTPUT_DIR)/base/base.o: $(base_objects)
-	$(CXX) $(CXXFLAGS) $(FFMPEG_LIB) -o $(OUTPUT_DIR)/base/base.o $(base_objects)
+$(OUTPUT_DIR)/io/io.o: io/io.cpp io/io.h
+	$(CXX) $(CXXFLAGS) -I$(INCLUDE_PATH) -c io/io.cpp -o $(OUTPUT_DIR)/io/io.o 
 
 $(OUTPUT_DIR)/base/sbreak.o: base/sbreak.cpp base/sbreak.h 
-	$(CXX) $(CXXFLAGS) -I$(INCLUDE_PATH) -o $(OUTPUT_DIR)/base/sbreak.o base/sbreak.cpp
+	$(CXX) $(CXXFLAGS) -I$(INCLUDE_PATH) -c base/sbreak.cpp -o $(OUTPUT_DIR)/base/sbreak.o 
 $(OUTPUT_DIR)/base/sjoin.o: base/sjoin.cpp base/sjoin.h
-	$(CXX) $(CXXFLAGS) -I$(INCLUDE_PATH) -o $(OUTPUT_DIR)/base/sjoin.o base/sjoin.cpp
+	$(CXX) $(CXXFLAGS) -I$(INCLUDE_PATH) -c base/sjoin.cpp -o $(OUTPUT_DIR)/base/sjoin.o 
 $(OUTPUT_DIR)/base/smerge.o: base/smerge.cpp base/smerge.h
-	$(CXX) $(CXXFLAGS) -I$(INCLUDE_PATH) -o $(OUTPUT_DIR)/base/smerge.o base/smerge.cpp
+	$(CXX) $(CXXFLAGS) -I$(INCLUDE_PATH) -c base/smerge.cpp -o $(OUTPUT_DIR)/base/smerge.o 
 $(OUTPUT_DIR)/base/sspilt.o: base/sspilt.cpp base/sspilt.h
-	$(CXX) $(CXXFLAGS) -I$(INCLUDE_PATH) -o $(OUTPUT_DIR)/base/sspilt.o base/sspilt.cpp
+	$(CXX) $(CXXFLAGS) -I$(INCLUDE_PATH) -c base/sspilt.cpp -o $(OUTPUT_DIR)/base/sspilt.o 
+
+# $(OUTPUT_DIR)/main.o: main.cpp $(HEADERS)
+# 	$(CXX) $(CXXFLAGS) -c main.cpp -o $(OUTPUT_DIR)/main.o
 
 clean:
-	rm edit $(objects)
+	rm -f $(objects)

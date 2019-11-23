@@ -1,18 +1,14 @@
 #include "io.h"
 
+extern "C"
+{
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
 #include <libswresample/swresample.h>
+}
 
 #define AUDIO_INBUF_SIZE 20480
 #define AUDIO_REFILL_THRESH 4096
-
-#ifndef __cplusplus
-#define true 1
-#define false 0
-
-typedef char bool;
-#endif
 
 static const enum AVCodecID FormatTablep[] =
 {
@@ -24,21 +20,16 @@ static const enum AVCodecID FormatTablep[] =
 
 static int decode(struct AVCodecContext *context, struct AVPacket *packet, struct AVFrame *frame, char *buff)
 {
-    int i, ch;
-    int ret, data_size;
     char *data_buff = buff;
-
     // 发送编码数据包给解码器
-    ret = avcodec_send_packet(context, packet);
-    if(ret < 0)
+    if(0 > avcodec_send_packet(context, packet))
     {
         return -1;
     }
-
     // 读取所有的输出帧
-    while(1)
+    while(true)
     {
-        ret = avcodec_receive_frame(context, frame);
+        int ret = avcodec_receive_frame(context, frame);
         if(ret == AVERROR(EAGAIN) || ret == AVERROR_EOF)
         {
             break;
@@ -47,21 +38,21 @@ static int decode(struct AVCodecContext *context, struct AVPacket *packet, struc
         {
             return -1;
         }
-        data_size = av_get_bytes_per_sample(context->sample_fmt);
+        int data_size = av_get_bytes_per_sample(context->sample_fmt);
         if (data_size < 0)
         {
             return -1;
         }
-        for(i = 0; i < frame->nb_samples; i++)
+        for(int i = 0; i < frame->nb_samples; i++)
         {
-            for(ch = 0; ch < context->channels; ch++)
+            for(int ch = 0; ch < context->channels; ch++)
             {
-                memcpy(data_buff, frame->data[ch] + data_size * i, (unsigned long long)data_size);
+                memcpy(data_buff, frame->data[ch] + data_size * i, static_cast<size_type>(data_size));
                 data_buff += data_size;
             }
         }
     }
-    return (int)(data_buff - buff);
+    return static_cast<int>(data_buff - buff);
 }
 
 size_type from_file(const char *file_name, char *buff)
@@ -78,32 +69,27 @@ size_type from_file(const char *file_name, char *buff)
     bool invalid = false;
 
     packet = av_packet_alloc();
-
     // 查找mp3解码器
     codec = avcodec_find_decoder(AV_CODEC_ID_MP3);
     if(!codec)
     {
         return 0;
     }
-
     parser = av_parser_init((int)codec->id);
     if(!parser)
     {
         return 0;
     }
-
     c = avcodec_alloc_context3(codec);
     if(!c)
     {
         return 0;
     }
-
     // 打开解码器
     if(avcodec_open2(c, codec, NULL) < 0)
     {
         return 0;
     }
-
     f = fopen(file_name, "rb");
     if(!f)
     {
@@ -129,7 +115,7 @@ size_type from_file(const char *file_name, char *buff)
             return 0;
         }
         data += ret;
-        data_size -= (size_type)ret;
+        data_size -= static_cast<size_type>(ret);
 
         if(packet->size > 0)
         {
@@ -140,7 +126,7 @@ size_type from_file(const char *file_name, char *buff)
                 break;
             }
             buff += ret;
-            result_length += (size_type)ret;
+            result_length += static_cast<size_type>(ret);
         }
 
         if(data_size < AUDIO_REFILL_THRESH)
@@ -162,7 +148,7 @@ size_type from_file(const char *file_name, char *buff)
         ret = decode(c, packet, decoded_frame, buff);
         if(ret > 0)
         {
-            result_length += (size_type)ret;
+            result_length += static_cast<size_type>(ret);
         }
 
     }
@@ -230,7 +216,6 @@ struct AVOutputFormat* get_output_format(const char *file_name,
                                          struct AVCodec *codec)
 {
     struct AVOutputFormat *output_format = format->oformat;
-    int result;
     // 创建音频流
     struct AVStream *audio_stream = avformat_new_stream(format, codec);
     if(audio_stream == NULL)
@@ -243,8 +228,7 @@ struct AVOutputFormat* get_output_format(const char *file_name,
     audio_stream->id = (int)format->nb_streams - 1;
     audio_stream->time_base.num = 1;
     audio_stream->time_base.den = 44100;
-    result = avcodec_parameters_from_context(audio_stream->codecpar, context);
-    if(result < 0)
+    if(0 > avcodec_parameters_from_context(audio_stream->codecpar, context))
     {
         avformat_free_context(format);
         return NULL;
@@ -256,8 +240,7 @@ struct AVOutputFormat* get_output_format(const char *file_name,
     // 打开文件IO
     if((output_format->flags & AVFMT_NOFILE) > 0)
     {
-        result = avio_open(&format->pb, file_name, AVIO_FLAG_WRITE);
-        if(result < 0)
+        if(0 > avio_open(&format->pb, file_name, AVIO_FLAG_WRITE))
         {
             avformat_free_context(format);
             return NULL;
@@ -426,4 +409,3 @@ int write(const char *data, size_type size, const char *file_name, struct AVCode
     avformat_free_context(format);
     return 0;
 }
-

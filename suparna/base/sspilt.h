@@ -1,13 +1,11 @@
 #ifndef SSPILT_H
 #define SSPILT_H
 
+#include "../type_def.h"
+
 #ifdef __cplusplus
 extern "C"
 {
-#endif
-
-#ifndef size_type
-#define size_type unsigned long long
 #endif
 
 /* 将一段音频分割成两段
