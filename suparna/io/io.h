@@ -3,30 +3,39 @@
 
 #include "../type_def.h"
 
-#ifdef __cplusplus
-extern "C"
-{
-#endif
-
 struct AVCodecContext;
 struct AVCodec;
 struct AVFormatContext;
 struct AVOutputFormat;
 
-enum FormatID
+struct PCM
+{
+    size_type size = 0; //数据长度
+    char *data = nullptr;//数据区
+    struct AVCodecContext *context = nullptr;//编码器上下文
+
+    ~PCM();
+};
+
+
+enum class FormatID : unsigned char
 {
     MP3,
     WAV,
     FLAC,
-    APE
+    APE,
+    PCM
 };
-/* 从文件中读取到音频数据
+/* 从文件中读取到音频数据，小端模式
  * @file_name  文件路径，绝对路径或相对路径
  * @data  __out__ 保存音频的pcm数据，用于输出
  * @return  数据长度
  * finish date: 2019.10.06
  */
 extern size_type from_file(const char *file_name, char *data);
+/* @pcm  PCM结构体，里面会分配data和context的空间
+*/
+extern void from_file(const char *file_name, struct PCM *pcm);
 
 /* 将音频数据输出为文件
  * @data  音频数据
@@ -83,10 +92,5 @@ extern struct AVOutputFormat* get_output_format(const char *file_name,
                                                 struct AVCodecContext *context,
                                                 struct AVFormatContext *format,
                                                 struct AVCodec *codec);
-
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif // IO_H

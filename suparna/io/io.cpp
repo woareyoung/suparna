@@ -1,5 +1,17 @@
 #include "io.h"
-#include <iostream>
+#include "../systool/file.h"
+#include "../constant.h"
+
+#if __cplusplus >= 201703L
+#if __has_include(<fstream>)
+// pass
+#else
+#include <fstream>
+#endif
+#else
+#include <fstream>
+#endif
+#include <fstream>
 
 extern "C"
 {
@@ -8,158 +20,213 @@ extern "C"
 #include <libswresample/swresample.h>
 }
 
-#define AUDIO_INBUF_SIZE 20480
-#define AUDIO_REFILL_THRESH 4096
+PCM::~PCM()
+{
+    if(data != nullptr) delete[] data;
+    if(context != nullptr) avcodec_free_context(&context);
+}
+// #define AUDIO_INBUF_SIZE 20480
+// #define AUDIO_REFILL_THRESH 4096
 
 static const enum AVCodecID FormatTablep[] =
 {
     AV_CODEC_ID_MP3,
     AV_CODEC_ID_PCM_S16LE,
     AV_CODEC_ID_FLAC,
-    AV_CODEC_ID_APE
+    AV_CODEC_ID_APE,
+    AV_CODEC_ID_PCM_S16LE
 };
 
-static int decode(struct AVCodecContext *context, struct AVPacket *packet, struct AVFrame *frame, char *buff)
+// static int decode(struct AVCodecContext *context, struct AVPacket *packet, struct AVFrame *frame, char *buff)
+// {
+//     char *data_buff = buff;
+//     // 发送编码数据包给解码器
+//     if(0 > avcodec_send_packet(context, packet))
+//     {
+//         return -1;
+//     }
+//     // 读取所有的输出帧
+//     while(true)
+//     {
+//         int ret = avcodec_receive_frame(context, frame);
+//         if(ret == AVERROR(EAGAIN) || ret == AVERROR_EOF)
+//         {
+//             break;
+//         }
+//         else if(ret < 0)
+//         {
+//             return -1;
+//         }
+//         int data_size = av_get_bytes_per_sample(context->sample_fmt);
+//         if (data_size < 0)
+//         {
+//             return -1;
+//         }
+//         for(int i = 0; i < frame->nb_samples; i++)
+//         {
+//             for(int ch = 0; ch < context->channels; ch++)
+//             {
+//                 memcpy(data_buff, frame->data[ch] + data_size * i, static_cast<size_type>(data_size));
+//                 data_buff += data_size;
+//             }
+//         }
+//     }
+//     return static_cast<int>(data_buff - buff);
+// }
+
+static AVCodecContext* alloc_context(FormatID type)
 {
-    char *data_buff = buff;
-    // 发送编码数据包给解码器
-    if(0 > avcodec_send_packet(context, packet))
+    struct AVCodec *codec = get_encoder(type);
+    struct AVCodecContext *context = get_encoder_context(codec);
+    if(context != nullptr)
     {
-        return -1;
+        context->bit_rate = 64000;//波特率
+        context->sample_rate = 44100;//采样率
+        context->sample_fmt = type == FormatID::WAV ? AV_SAMPLE_FMT_S16 : AV_SAMPLE_FMT_S16P;
+        context->channels = 2;
+        context->channel_layout = (unsigned long long)av_get_default_channel_layout(2);
+        context->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
     }
-    // 读取所有的输出帧
-    while(true)
-    {
-        int ret = avcodec_receive_frame(context, frame);
-        if(ret == AVERROR(EAGAIN) || ret == AVERROR_EOF)
-        {
-            break;
-        }
-        else if(ret < 0)
-        {
-            return -1;
-        }
-        int data_size = av_get_bytes_per_sample(context->sample_fmt);
-        if (data_size < 0)
-        {
-            return -1;
-        }
-        for(int i = 0; i < frame->nb_samples; i++)
-        {
-            for(int ch = 0; ch < context->channels; ch++)
-            {
-                memcpy(data_buff, frame->data[ch] + data_size * i, static_cast<size_type>(data_size));
-                data_buff += data_size;
-            }
-        }
-    }
-    return static_cast<int>(data_buff - buff);
+    return context;
+}
+
+void from_file(const char *file_name, struct PCM *pcm)
+{
+    pcm->context = alloc_context(FormatID::PCM); 
+    pcm->size = get_file_size(file_name);
+    pcm->data = new char[pcm->size + 1];
+    pcm->data[pcm->size] = 0;
+    from_file(file_name, pcm->data);
 }
 
 size_type from_file(const char *file_name, char *buff)
 {
-    const struct AVCodec *codec;
-    struct AVCodecContext *c = NULL;
-    struct AVCodecParserContext *parser = NULL;
-    int ret;
-    FILE *f;
-    uint8_t inbuf[AUDIO_INBUF_SIZE + AV_INPUT_BUFFER_PADDING_SIZE], *data;
-    size_type data_size, len, result_length = 0;
-    struct AVPacket *packet;
-    struct AVFrame *decoded_frame = NULL;
-    bool invalid = false;
-
-    packet = av_packet_alloc();
-
-    // 查找mp3解码器
-    codec = avcodec_find_decoder(AV_CODEC_ID_MP3);
-    if(!codec)
+    static int __count = 0;
+    std::string command = FFMPEG_EXE_PATH;
+    std::string args = " -f s16le -ar 44100 -ac 2 -acodec ";
+    std::string to_file_name = "__temp__" + std::to_string(__count++) + ".pcm";
+    command += " -i ";
+    command += file_name;
+    command += args + to_file_name;
+    size_type result_length = 0;
+    if(system(command.c_str()) == 0)
     {
-        return 0;
-    }
-    parser = av_parser_init((int)codec->id);
-    if(!parser)
-    {
-        return 0;
-    }
-    c = avcodec_alloc_context3(codec);
-    if(!c)
-    {
-        return 0;
-    }
-    // 打开解码器
-    if(avcodec_open2(c, codec, NULL) < 0)
-    {
-        return 0;
-    }
-    f = fopen(file_name, "rb");
-    if(!f)
-    {
-        return 0;
-    }
-    // 解码数据
-    data = inbuf;
-    data_size = fread(inbuf, 1, AUDIO_INBUF_SIZE, f);
-
-    while(data_size > 0)
-    {
-        if(!decoded_frame)
-        {
-            if(!(decoded_frame = av_frame_alloc()))
-            {
-                return 0;
-            }
-        }
-
-        ret = av_parser_parse2(parser, c, &packet->data, &packet->size, (uint8_t *)&data[0], (int)data_size, AV_NOPTS_VALUE, AV_NOPTS_VALUE, 0);
-        if(ret < 0)
+        result_length = get_file_size(to_file_name.c_str());
+        std::ifstream file(to_file_name.c_str());
+        if(!file.is_open())
         {
             return 0;
         }
-        data += ret;
-        data_size -= static_cast<size_type>(ret);
-
-        if(packet->size > 0)
+        else 
         {
-            ret = decode(c, packet, decoded_frame, buff);
-            if(ret < 0)
-            {
-                invalid = true;
-                break;
-            }
-            buff += ret;
-            result_length += static_cast<size_type>(ret);
-        }
-
-        if(data_size < AUDIO_REFILL_THRESH)
-        {
-            memmove(inbuf, data, data_size);
-            data = inbuf;
-            len = fread(data + data_size, 1, AUDIO_INBUF_SIZE - data_size, f);
-            if (len > 0)
-            {
-                data_size += len;
-            }
+            file.read(buff, result_length);
+            file.close();
+            remove_file(to_file_name.c_str());
         }
     }
-    if(invalid == false)
-    {
-        // 处理最后的数据
-        packet->data = NULL;
-        packet->size = 0;
-        ret = decode(c, packet, decoded_frame, buff);
-        if(ret > 0)
-        {
-            result_length += static_cast<size_type>(ret);
-        }
+    --__count;
+    // const struct AVCodec *codec;
+    // struct AVCodecContext *c = NULL;
+    // struct AVCodecParserContext *parser = NULL;
+    // int ret;
+    // FILE *f;
+    // uint8_t inbuf[AUDIO_INBUF_SIZE + AV_INPUT_BUFFER_PADDING_SIZE], *data;
+    // size_type data_size, len, result_length = 0;
+    // struct AVPacket *packet;
+    // struct AVFrame *decoded_frame = NULL;
+    // bool invalid = false;
 
-    }
-    fclose(f);
+    // packet = av_packet_alloc();
 
-    avcodec_free_context(&c);
-    av_parser_close(parser);
-    av_frame_free(&decoded_frame);
-    av_packet_free(&packet);
+    // // 查找mp3解码器
+    // codec = avcodec_find_decoder(AV_CODEC_ID_MP3);
+    // if(!codec)
+    // {
+    //     return 0;
+    // }
+    // parser = av_parser_init((int)codec->id);
+    // if(!parser)
+    // {
+    //     return 0;
+    // }
+    // c = avcodec_alloc_context3(codec);
+    // if(!c)
+    // {
+    //     return 0;
+    // }
+    // // 打开解码器
+    // if(avcodec_open2(c, codec, NULL) < 0)
+    // {
+    //     return 0;
+    // }
+    // f = fopen(file_name, "rb");
+    // if(!f)
+    // {
+    //     return 0;
+    // }
+    // // 解码数据
+    // data = inbuf;
+    // data_size = fread(inbuf, 1, AUDIO_INBUF_SIZE, f);
+
+    // while(data_size > 0)
+    // {
+    //     if(!decoded_frame)
+    //     {
+    //         if(!(decoded_frame = av_frame_alloc()))
+    //         {
+    //             return 0;
+    //         }
+    //     }
+
+    //     ret = av_parser_parse2(parser, c, &packet->data, &packet->size, (uint8_t *)&data[0], (int)data_size, AV_NOPTS_VALUE, AV_NOPTS_VALUE, 0);
+    //     if(ret < 0)
+    //     {
+    //         return 0;
+    //     }
+    //     data += ret;
+    //     data_size -= static_cast<size_type>(ret);
+
+    //     if(packet->size > 0)
+    //     {
+    //         ret = decode(c, packet, decoded_frame, buff);
+    //         if(ret < 0)
+    //         {
+    //             invalid = true;
+    //             break;
+    //         }
+    //         buff += ret;
+    //         result_length += static_cast<size_type>(ret);
+    //     }
+
+    //     if(data_size < AUDIO_REFILL_THRESH)
+    //     {
+    //         memmove(inbuf, data, data_size);
+    //         data = inbuf;
+    //         len = fread(data + data_size, 1, AUDIO_INBUF_SIZE - data_size, f);
+    //         if (len > 0)
+    //         {
+    //             data_size += len;
+    //         }
+    //     }
+    // }
+    // if(invalid == false)
+    // {
+    //     // 处理最后的数据
+    //     packet->data = NULL;
+    //     packet->size = 0;
+    //     ret = decode(c, packet, decoded_frame, buff);
+    //     if(ret > 0)
+    //     {
+    //         result_length += static_cast<size_type>(ret);
+    //     }
+
+    // }
+    // fclose(f);
+
+    // avcodec_free_context(&c);
+    // av_parser_close(parser);
+    // av_frame_free(&decoded_frame);
+    // av_packet_free(&packet);
     return result_length;
 }
 
@@ -173,7 +240,7 @@ int to_file(const char *data, size_type size, const char *file_name, enum Format
     }
     context->bit_rate = 64000;//波特率
     context->sample_rate = 44100;//采样率
-    context->sample_fmt = type == WAV ? AV_SAMPLE_FMT_S16 : AV_SAMPLE_FMT_S16P;
+    context->sample_fmt = type == FormatID::WAV ? AV_SAMPLE_FMT_S16 : AV_SAMPLE_FMT_S16P;
     context->channels = 2;
     context->channel_layout = (unsigned long long)av_get_default_channel_layout(2);
     context->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
@@ -181,13 +248,13 @@ int to_file(const char *data, size_type size, const char *file_name, enum Format
 }
 
 int to_mp3(const char *data, size_type size, const char *file_name)
-{ return to_file(data, size, file_name, MP3); }
+{ return to_file(data, size, file_name, FormatID::MP3); }
 int to_wav(const char *data, size_type size, const char *file_name)
-{ return to_file(data, size, file_name, WAV); }
+{ return to_file(data, size, file_name, FormatID::WAV); }
 int to_flac(const char *data, size_type size, const char *file_name)
-{ return to_file(data, size, file_name, FLAC); }
+{ return to_file(data, size, file_name, FormatID::FLAC); }
 int to_ape(const char *data, size_type size, const char *file_name)
-{ return to_file(data, size, file_name, APE); }
+{ return to_file(data, size, file_name, FormatID::APE); }
 
 struct AVCodecContext *get_encoder_context(struct AVCodec *coder)
 {
@@ -197,7 +264,7 @@ struct AVCodecContext *get_encoder_context(struct AVCodec *coder)
 
 struct AVCodec *get_encoder(enum FormatID type)
 {
-    return avcodec_find_encoder(FormatTablep[type]);
+    return avcodec_find_encoder(FormatTablep[static_cast<std::size_t>(type)]);
 }
 
 struct AVFormatContext *get_format_context(const char *file_name)

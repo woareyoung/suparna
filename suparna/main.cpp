@@ -3,6 +3,7 @@
 #include "base/sjoin.h"
 #include "base/smerge.h"
 #include "base/sspilt.h"
+#include "systool/file.h"
 #include <iostream>
 
 static constexpr const char * const file_name = "test.mp3";
@@ -10,17 +11,7 @@ static constexpr const char * const file_name = "test.mp3";
 int main()
 {
     std::cout << "process start" << std::endl;
-#ifdef SUPPORT_FILESYSTEM
-    size_type file_size = std_fs::file_size(file_name);
-#else
-    std::ifstream f(file_name);
-    if(!f.is_open())
-    {
-        std::cout << "cannot open file" << std::endl;
-    }
-    f.seekg(0, std::ios::end);
-    size_type file_size = static_cast<size_type>(f.tellg());
-#endif
+    size_type file_size = get_file_size(file_name);
 
     char *buffer = new char[file_size + 1];
     buffer[file_size] = 0;
