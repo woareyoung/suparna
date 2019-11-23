@@ -37,6 +37,7 @@ static constexpr const char * const file_name = "test.mp3";
 
 int main()
 {
+    std::cout << "process start" << std::endl;
 #ifdef SUPPORT_FILESYSTEM
     size_type file_size = std_fs::file_size(file_name);
 #else
@@ -55,6 +56,7 @@ int main()
     size_type len = from_file(file_name, buffer);
     std::cout << "parse successfully, size = " << len << std::endl;
 
+    std::cout << "process end" << std::endl;
     system("pause");
     return 0;
 }
