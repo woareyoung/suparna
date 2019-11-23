@@ -126,14 +126,14 @@ size_type from_file(const char *file_name, char *buff)
     }
     --__count;
     // const struct AVCodec *codec;
-    // struct AVCodecContext *c = NULL;
-    // struct AVCodecParserContext *parser = NULL;
+    // struct AVCodecContext *c = nullptr;
+    // struct AVCodecParserContext *parser = nullptr;
     // int ret;
     // FILE *f;
     // uint8_t inbuf[AUDIO_INBUF_SIZE + AV_INPUT_BUFFER_PADDING_SIZE], *data;
     // size_type data_size, len, result_length = 0;
     // struct AVPacket *packet;
-    // struct AVFrame *decoded_frame = NULL;
+    // struct AVFrame *decoded_frame = nullptr;
     // bool invalid = false;
 
     // packet = av_packet_alloc();
@@ -155,7 +155,7 @@ size_type from_file(const char *file_name, char *buff)
     //     return 0;
     // }
     // // 打开解码器
-    // if(avcodec_open2(c, codec, NULL) < 0)
+    // if(avcodec_open2(c, codec, nullptr) < 0)
     // {
     //     return 0;
     // }
@@ -212,7 +212,7 @@ size_type from_file(const char *file_name, char *buff)
     // if(invalid == false)
     // {
     //     // 处理最后的数据
-    //     packet->data = NULL;
+    //     packet->data = nullptr;
     //     packet->size = 0;
     //     ret = decode(c, packet, decoded_frame, buff);
     //     if(ret > 0)
@@ -232,19 +232,12 @@ size_type from_file(const char *file_name, char *buff)
 
 int to_file(const char *data, size_type size, const char *file_name, enum FormatID type)
 {
-    struct AVCodec *codec = get_encoder(type);
-    struct AVCodecContext *context = get_encoder_context(codec);
-    if(context == NULL)
+    struct AVCodecContext *context = alloc_context(type);
+    if(context == nullptr)
     {
         return -1;
     }
-    context->bit_rate = 64000;//波特率
-    context->sample_rate = 44100;//采样率
-    context->sample_fmt = type == FormatID::WAV ? AV_SAMPLE_FMT_S16 : AV_SAMPLE_FMT_S16P;
-    context->channels = 2;
-    context->channel_layout = (unsigned long long)av_get_default_channel_layout(2);
-    context->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
-    return write(data, size, file_name, context, codec);
+    return write(data, size, file_name, context, context->codec);
 }
 
 int to_mp3(const char *data, size_type size, const char *file_name)
@@ -258,7 +251,7 @@ int to_ape(const char *data, size_type size, const char *file_name)
 
 struct AVCodecContext *get_encoder_context(struct AVCodec *coder)
 {
-    if(coder == NULL) return NULL;
+    if(coder == nullptr) return nullptr;
     return avcodec_alloc_context3(coder);
 }
 
@@ -269,12 +262,12 @@ struct AVCodec *get_encoder(enum FormatID type)
 
 struct AVFormatContext *get_format_context(const char *file_name)
 {
-    struct AVFormatContext *format = NULL;
+    struct AVFormatContext *format = nullptr;
     // 创建输出 Format 上下文
-    int result = avformat_alloc_output_context2(&format, NULL, NULL, file_name);
+    int result = avformat_alloc_output_context2(&format, nullptr, nullptr, file_name);
     if(result < 0)
     {
-        return NULL;
+        return nullptr;
     }
     return format;
 }
@@ -282,15 +275,15 @@ struct AVFormatContext *get_format_context(const char *file_name)
 struct AVOutputFormat* get_output_format(const char *file_name,
                                          struct AVCodecContext *context,
                                          struct AVFormatContext *format,
-                                         struct AVCodec *codec)
+                                         const struct AVCodec *codec)
 {
     struct AVOutputFormat *output_format = format->oformat;
     // 创建音频流
     struct AVStream *audio_stream = avformat_new_stream(format, codec);
-    if(audio_stream == NULL)
+    if(audio_stream == nullptr)
     {
         avformat_free_context(format);
-        return NULL;
+        return nullptr;
     }
 
     // 设置流中的参数
@@ -300,7 +293,7 @@ struct AVOutputFormat* get_output_format(const char *file_name,
     if(0 > avcodec_parameters_from_context(audio_stream->codecpar, context))
     {
         avformat_free_context(format);
-        return NULL;
+        return nullptr;
     }
 
     // 打印FormatContext信息
@@ -312,42 +305,42 @@ struct AVOutputFormat* get_output_format(const char *file_name,
         if(0 > avio_open(&format->pb, file_name, AVIO_FLAG_WRITE))
         {
             avformat_free_context(format);
-            return NULL;
+            return nullptr;
         }
     }
 
     return output_format;
 }
 
-int write(const char *data, size_type size, const char *file_name, struct AVCodecContext *context, struct AVCodec *codec)
+int write(const char *data, size_type size, const char *file_name, struct AVCodecContext *context, const struct AVCodec *codec)
 {
-    struct AVFrame *frame = NULL;
-    const char *src_data_pointer[1] = {NULL};
-    struct AVPacket *packet = NULL;
-    struct AVFormatContext *format = NULL;
-    struct AVOutputFormat *output_format = NULL;
+    struct AVFrame *frame = nullptr;
+    const char *src_data_pointer[1] = {nullptr};
+    struct AVPacket *packet = nullptr;
+    struct AVFormatContext *format = nullptr;
+    struct AVOutputFormat *output_format = nullptr;
     size_type per_frame_data_size, count, i;
     int frame_count = 0, result;
     int64_t channel_layout = 0;
-    SwrContext *swrContext = NULL;
+    SwrContext *swrContext = nullptr;
 
-    if(context == NULL || codec == NULL)
+    if(context == nullptr || codec == nullptr)
     {
         return -1;
     }
-    result = avcodec_open2(context, codec, NULL);
+    result = avcodec_open2(context, codec, nullptr);
     if(result < 0)
     {
         return -1;
     }
     format = get_format_context(file_name);
-    if(format == NULL)
+    if(format == nullptr)
     {
         avcodec_free_context(&context);
         return -1;
     }
     output_format = get_output_format(file_name, context, format, codec);
-    if(output_format == NULL)
+    if(output_format == nullptr)
     {
         avcodec_free_context(&context);
         return -1;
@@ -398,7 +391,7 @@ int write(const char *data, size_type size, const char *file_name, struct AVCode
     {
         // 创建Packet
         packet = av_packet_alloc();
-        if(packet == NULL)
+        if(packet == nullptr)
         {
             avcodec_free_context(&context);
             return -1;
@@ -425,8 +418,8 @@ int write(const char *data, size_type size, const char *file_name, struct AVCode
             channel_layout = av_get_default_channel_layout(2);
 
             // 格式转换 S16->S16P
-            swrContext = swr_alloc_set_opts(NULL, channel_layout, AV_SAMPLE_FMT_S16P, 44100,
-                                                        channel_layout, AV_SAMPLE_FMT_S16, 44100, 0, NULL);
+            swrContext = swr_alloc_set_opts(nullptr, channel_layout, AV_SAMPLE_FMT_S16P, 44100,
+                                                        channel_layout, AV_SAMPLE_FMT_S16, 44100, 0, nullptr);
             swr_init(swrContext);
 
             src_data_pointer[0] = &data[per_frame_data_size * i];

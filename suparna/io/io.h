@@ -60,7 +60,7 @@ extern int to_ape(const char *data, size_type size, const char *file_name);
  * @return   成功——0，失败—— -1
  * finish date: 2019.10.04
  */
-extern int write(const char *data, size_type size, const char *file_name, struct AVCodecContext *context, struct AVCodec *code);
+extern int write(const char *data, size_type size, const char *file_name, struct AVCodecContext *context, const struct AVCodec *code);
 
 /* 根据文件类型获取对应的编码器上下文
  * @type  文件类型
@@ -91,6 +91,6 @@ extern struct AVFormatContext* get_format_context(const char *file_name);
 extern struct AVOutputFormat* get_output_format(const char *file_name,
                                                 struct AVCodecContext *context,
                                                 struct AVFormatContext *format,
-                                                struct AVCodec *codec);
+                                                const struct AVCodec *codec);
 
 #endif // IO_H
