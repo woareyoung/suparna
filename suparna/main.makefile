@@ -1,4 +1,3 @@
-LIB_PATH = E:/ffmpeg/ffmpeg/lib  # ffmpeg静态库路径
 CC = gcc
 CCFLAGS = -Wall -g
 CXX = g++
@@ -6,7 +5,9 @@ CXXFLAGS = $(CCFLAGS) -std=c++17  # g++ 编译选项
 STD_LIB = -lstdc++fs  # 需要链接的标准库
 COMPILE_TYPE = debug
 OUTPUT_DIR = ../$(COMPILE_TYPE)
+
 INCLUDE_PATH = E:/ffmpeg/ffmpeg/include  # ffmpeg头文件路径
+LIB_PATH = E:/ffmpeg/ffmpeg/lib  # ffmpeg静态库路径
 
 TARGET = $(OUTPUT_DIR)/Suparna # 编译目标
 

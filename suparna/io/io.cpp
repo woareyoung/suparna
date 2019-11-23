@@ -1,4 +1,5 @@
 #include "io.h"
+#include <iostream>
 
 extern "C"
 {
@@ -69,6 +70,7 @@ size_type from_file(const char *file_name, char *buff)
     bool invalid = false;
 
     packet = av_packet_alloc();
+
     // 查找mp3解码器
     codec = avcodec_find_decoder(AV_CODEC_ID_MP3);
     if(!codec)

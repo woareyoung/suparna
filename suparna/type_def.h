@@ -7,7 +7,6 @@
 
 using size_type = unsigned long long;
 
-
 #if __GNUC__ == 8 || __GNUC__ < 7
 #error not support current gcc version
 
